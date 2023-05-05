@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+
+import os
+import re
+import sys
+
+POPF = 'popf'
+__name__ = "spamrate"
+PERIOD = 1.*30*24*60*60          # 1 mois
+
+# Recherche de popf
+
+for path in os.environ['PATH'].split(os.pathsep)+['.']:
+    POPF_PATH = os.path.join(path, POPF)
+    if os.path.isfile(POPF_PATH):
+        break
+else:
+    print "PopF not found in PATH"
+
+sys.argv[0] = POPF_PATH
+execfile(POPF_PATH)
+
+popf_version()
+
+spams = []
+last = 0
+spam_re = re.compile(r'^\d+$')
+
+for spam in FileExtractor(*config['BAD_CORPUS']):
+    if spam_re.match(os.path.basename(spam)):
+        date = os.stat(spam).st_mtime
+        size = os.stat(spam).st_size
+        spams.append((spam, date, size))
+        last = max(last, date)
+
+octets = sum(size for (spam, date, size) in spams if date > last-PERIOD)
+spams = len([spam for (spam, date, size) in spams if date > last-PERIOD])
+
+spam_seconde = spams/PERIOD
+spam_jour = spam_seconde*60*60*24
+spam_semaine = spam_jour*7
+spam_an = spam_jour*365.2422
+spam_mois = spam_an/12
+
+octet_seconde = octets/PERIOD
+octet_jour = octet_seconde*60*60*24
+octet_semaine = octet_jour*7
+octet_an = octet_jour*365.2422
+octet_mois = octet_an/12
+
+print "Spams par jour    : %6d (%d Ko)"%(spam_jour, octet_jour/1024)
+print "Spams par semaine : %6d (%d Ko)"%(spam_semaine, octet_semaine/1024)
+print "Spams par mois    : %6d (%d Mo)"%(spam_mois, octet_mois/1024/1024)
+print "Spams par an      : %6d (%d Mo)"%(spam_an, octet_an/1024/1024)
